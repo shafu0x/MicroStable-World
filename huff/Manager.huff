@@ -1,0 +1,453 @@
+/// @title Manager
+/// @notice SPDX-License-Identifier: MIT
+/// @author nonso <https://github.com/0xnonso>
+
+///////////////////////////////////////////////////////////////////////////////
+///                                 IMPORTS                                 ///
+///////////////////////////////////////////////////////////////////////////////
+
+#include "../lib/huffmate/src/auth/NonPayable.huff"
+#include "../lib/huffmate/src/utils/SafeTransferLib.huff"
+
+///////////////////////////////////////////////////////////////////////////////
+///                                INTERFACE                                ///
+///////////////////////////////////////////////////////////////////////////////
+
+#define function deposit(uint256) nonpayable returns ()
+#define function burn(uint256) nonpayable returns ()
+#define function mint(uint256) nonpayable returns ()
+#define function withdraw(uint256) nonpayable returns ()
+#define function liquidate(address) nonpayable returns ()
+#define function collatRatio(address) view returns (uint256)
+#define function weth() view returns (address)
+#define function hUSD() view returns (address)
+#define function oracle() view returns (address)
+
+///////////////////////////////////////////////////////////////////////////////
+///                               STORAGE SLOTS                             ///
+///////////////////////////////////////////////////////////////////////////////
+
+#define constant _ADDRESS_TO_DEPOSIT_SLOT = FREE_STORAGE_POINTER()
+#define constant _ADDRESS_TO_MINTED_SLOT  = FREE_STORAGE_POINTER()
+
+///////////////////////////////////////////////////////////////////////////////
+///                                 CONSTANTS                               ///
+///////////////////////////////////////////////////////////////////////////////
+
+#define constant z                        = 0x0000000000000000000000000000000000000000000000000000000000000000
+#define constant _WETH_OFFSET             = 0x0000000000000000000000000000000000000000000000000000000000000060
+#define constant _HUSD_OFFSET             = 0x0000000000000000000000000000000000000000000000000000000000000040
+#define constant _ORACLE_OFFSET           = 0x0000000000000000000000000000000000000000000000000000000000000020
+#define constant MIN_COLLAT_RATIO         = 0x14d1120d7b160000
+#define constant UINT256_MAX              = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+
+/////////////////////////////////////////////////////////////////////////////
+///                              CONSTRUCTOR                              ///
+/////////////////////////////////////////////////////////////////////////////
+
+#define macro CONSTRUCTOR() = takes(0) returns(0) {
+    // Copy the runtime bytecode with constructor argument concatenated.
+    __codesize(CONSTRUCTOR)         // [offset] - constructor code size
+    dup1                            // [offset, offset]
+    codesize                        // [total_size, offset, offset]
+    sub                             // [runtime_size, offset]
+    dup1                            // [runtime_size, runtime_size, offset]
+    swap2                           // [offset, runtime_size, runtime_size]
+    returndatasize                  // [return_offset, offset, runtime_size, runtime_size]
+    codecopy                        // [runtime_size]
+
+    // Return the runtime bytecode.
+    returndatasize                  // [return_offset, runtime_size]
+    return                          // []
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///                                FUNCTIONS                              ///
+/////////////////////////////////////////////////////////////////////////////
+
+#define macro DEPOSIT() = takes(0) returns(0){
+    NON_PAYABLE()
+    _WETH_TOKEN()                   // [token]
+    0x04 calldataload               // [amount, token]
+    address                         // [address_this, amount, token]
+    caller                          // [msg_sender, address_this, amount, token]
+    SAFE_TRANSFER_FROM(z)           // []
+    caller                          // [msg_sender]
+    [_ADDRESS_TO_DEPOSIT_SLOT]      // [addr_to_deposit_slot_ptr, msg_sender]
+    GET_SLOT_FROM_KEYS(z)           // [addr_to_deposit_slot]
+    dup1                            // [addr_to_deposit_slot, addr_to_deposit_slot]
+    sload                           // [deposited_amt, addr_to_deposit_slot]
+    0x04 calldataload               // [amount, deposited_amt, addr_to_deposit_slot]
+    SAFE_ADD()                      // [amount + deposited_amt, addr_to_deposit_slot]
+    swap1                           // [addr_to_deposit_slot, amount + deposited_amt]
+    sstore                          // []
+    stop
+}
+
+#define macro MINT() = takes(0) returns(0){
+    NON_PAYABLE()
+    0x04 calldataload               // [amount]
+    caller                          // [msg_sender, amount]
+    [_ADDRESS_TO_MINTED_SLOT]       // [addr_to_minted_slot_ptr, msg_sender, amount]
+    GET_SLOT_FROM_KEYS(z)           // [addr_to_minted_slot, amount]
+    dup1                            // [addr_to_minted_slot, addr_to_minted_slot, amount]
+    sload                           // [minted_amt, addr_to_minted_slot, amount]
+    dup3                            // [amount, minted_amt, addr_to_minted_slot, amount]
+    SAFE_ADD()                      // [amount + minted_amt, addr_to_minted_slot, amount]
+    swap1                           // [addr_to_minted_slot, amount + minted_amt, amount]
+    sstore                          // [amount]
+    [MIN_COLLAT_RATIO]              // [MIN_COLLAT_RATIO, amount]
+    caller                          // [msg_sender, MIN_COLLAT_RATIO, amount]
+    _COLLAT_RATIO()                 // [collat_ratio, MIN_COLLAT_RATIO, amount]
+    lt                              // [collat_ratio < MIN_COLLAT_RATIO, amount]
+    _REQUIRE_NOT()                  // [amount]
+    caller                          // [msg_sender, amount]
+    _HUSD_MINT(z)                   // []
+    stop
+}
+
+#define macro BURN() = takes(0) returns(0){
+    NON_PAYABLE()
+    0x04 calldataload               // [amount]
+    caller                          // [msg_sender, amount]
+    [_ADDRESS_TO_MINTED_SLOT]       // [addr_to_minted_slot_ptr, msg_sender, amount]
+    GET_SLOT_FROM_KEYS(z)           // [addr_to_minted_slot, amount]
+    dup2                            // [amount, addr_to_minted_slot, amount]
+    dup2                            // [addr_to_minted_slot, amount, addr_to_minted_slot, amount]
+    sload                           // [minted_amt, amount, addr_to_minted_slot, amount]
+    SAFE_SUB()                      // [minted_amt - amount, addr_to_minted_slot, amount]
+    swap1                           // [addr_to_minted_slot, minted_amt - amount, amount]
+    sstore                          // [amount]
+    caller                          // [msg_sender, amount]
+    _HUSD_BURN(z)                   // []
+    stop
+}
+
+#define macro WITHDRAW() = takes(0) returns(0){
+    NON_PAYABLE()
+    0x04 calldataload               // [amount]
+    caller                          // [msg_sender, amount]
+    [_ADDRESS_TO_DEPOSIT_SLOT]      // [addr_to_deposit_slot_ptr, msg_sender, amount]
+    GET_SLOT_FROM_KEYS(z)           // [addr_to_deposit_slot, amount]
+    dup2                            // [amount, addr_to_deposit_slot, amount]
+    dup2                            // [addr_to_deposit_slot, amount, addr_to_deposit_slot, amount]
+    sload                           // [deposited_amt, amount, addr_to_deposit_slot, amount]
+    SAFE_SUB()                      // [deposited_amt - amount, addr_to_deposit_slot, amount]
+    swap1                           // [addr_to_deposit_slot, deposited_amt - amount, amount]
+    sstore                          // [amount]
+    [MIN_COLLAT_RATIO]              // [MIN_COLLAT_RATIO, amount]
+    caller                          // [msg_sender, MIN_COLLAT_RATIO, amount]
+    _COLLAT_RATIO()                 // [collat_ratio, MIN_COLLAT_RATIO, amount]
+    lt                              // [collat_ratio < MIN_COLLAT_RATIO, amount]
+    _REQUIRE_NOT()                  // [amount]
+    _WETH_TOKEN()                   // [token, amount]
+    swap1                           // [amount, token]
+    caller                          // [msg_sender, amount, token]
+    SAFE_TRANSFER(z)                // [msg_sender, amount, token]
+    stop
+}
+
+#define macro LIQUIDATE() = takes(0) returns(0){
+    NON_PAYABLE()
+    [z] 0x04                        // [0x04, 0]
+    calldataload                    // [user, 0]
+    [MIN_COLLAT_RATIO]              // [MIN_COLLAT_RATIO, user, 0]
+    dup2                            // [user, MIN_COLLAT_RATIO, user, 0]
+    _COLLAT_RATIO()                 // [collat_ratio, MIN_COLLAT_RATIO, user, 0]
+    lt                              // [collat_ratio < MIN_COLLAT_RATIO, user, 0]
+    _REQUIRE()                      // [user, 0]
+
+    [z]                             // [0, user, 0]
+    dup2                            // [user, 0, user, 0]
+    [_ADDRESS_TO_MINTED_SLOT]       // [addr_to_minted_slot_ptr, user, 0, user, 0]
+    GET_SLOT_FROM_KEYS(z)           // [addr_to_minted_slot, 0, user, 0]
+    dup1                            // [addr_to_minted_slot, addr_to_minted_slot, 0, user, 0]
+    sload                           // [minted_amt, addr_to_minted_slot, 0, user, 0]
+    caller                          // [msg_sender, minted_amt, addr_to_minted_slot, 0, user, 0]
+    _HUSD_BURN(z)                   // [addr_to_minted_slot, 0, user, 0]
+    sstore                          // [user, 0]
+
+    [_ADDRESS_TO_DEPOSIT_SLOT]      // [addr_to_deposit_slot_ptr, user, 0]
+    GET_SLOT_FROM_KEYS(z)           // [addr_to_deposit_slot, 0]
+    dup1                            // [addr_to_deposit_slot, addr_to_deposit_slot, 0]
+    sload                           // [deposited_amt, addr_to_deposit_slot, 0]
+    _WETH_TOKEN()                   // [token, deposited_amt, addr_to_deposit_slot, 0]
+    swap1                           // [deposited_amt, token, addr_to_deposit_slot, 0]
+    caller                          // [msg_sender, deposited_amt, token, addr_to_deposit_slot, 0]
+    SAFE_TRANSFER(z)                // [addr_to_deposit_slot, 0]
+
+    sstore                          // []
+    stop
+}
+
+#define macro _COLLAT_RATIO() = takes(0) returns(1){
+                                    // [user]
+    dup1                            // [user, user]
+    [_ADDRESS_TO_MINTED_SLOT]       // [addr_to_minted_slot_ptr, user, user]
+    GET_SLOT_FROM_KEYS(z)           // [addr_to_minted_slot, user]
+    sload                           // [minted_amt, user]
+    dup1                            // [minted_amt, minted_amt, user]
+    iszero                          // [minted_amt == 0, minted_amt, user]
+    iszero                          // [(minted_amt == 0) == 0, minted_amt, user]
+    continue                        // [jump_dest, (minted_amt == 0) == 0, minted_amt, user]
+    jumpi                           // [minted_amt, user]
+
+    pop pop                         // []
+    [UINT256_MAX]                   // [UINT256_MAX]
+    finish                          // [jump_dest, UINT256_MAX]
+    jump                            // [UINT256_MAX]
+
+    continue:
+                                    // [minted_amt, user]
+        // 0xde0b6b3a7640000        // [1e18, minted_amt, user]
+        // 0x04 calldataload        // [user, 1e18, minted_amt]
+        swap1                       // [user, minted_amt]    
+        [_ADDRESS_TO_DEPOSIT_SLOT]  // [addr_to_deposit_slot_ptr, user, minted_amt]
+        GET_SLOT_FROM_KEYS(z)       // [addr_to_deposit_slot, minted_amt]
+        sload                       // [deposited_amt, minted_amt]
+        _ORACLE_LATEST_ANSWER(z)    // [oracle_answer, deposited_amt, minted_amt]
+        SAFE_MUL()                  // [oracle_answer * deposited_amt, minted_amt]
+        0x5f5e100                   // [1e8, oracle_answer * deposited_amt, minted_amt]
+        swap1                       // [oracle_answer * deposited_amt, 1e8, minted_amt]
+        div                         // [total_value = (oracle_answer * deposited_amt) / 1e8, minted_amt]
+        div                         // [total_value / minted_amt]
+    
+    finish:
+}
+#define macro COLLAT_RATIO() = takes(0) returns(0){
+    NON_PAYABLE()
+    0x04 calldataload               // [user]
+    _COLLAT_RATIO()                 // [collat_ratio]
+    [z] mstore                      // []
+    0x20 [z] return                 // []
+}
+
+#define macro _WETH_TOKEN() = takes(0) returns (1){
+    _GET_IMMUTABLE(_WETH_OFFSET, z) // [weth_token]
+}
+#define macro WETH_TOKEN() = takes(0) returns (0){
+    NON_PAYABLE()
+    _GET_IMMUTABLE(_WETH_OFFSET, z) // [weth_token]
+    [z] mstore                      // []
+    0x20 [z] return                 // []
+}
+
+#define macro _HUSD_TOKEN() = takes(0) returns (1){
+    _GET_IMMUTABLE(_HUSD_OFFSET, z) // [husd_token]
+}
+#define macro HUSD_TOKEN() = takes(0) returns (0){
+    NON_PAYABLE()                   // []
+    _HUSD_TOKEN()                   // [husd_token]
+    [z] mstore                      // [name_length, name_value]
+    0x20 [z] return                 // []
+}
+
+#define macro _ORACLE() = takes(0) returns (1){
+    _GET_IMMUTABLE(_ORACLE_OFFSET,z)// [oracle]
+}
+#define macro ORACLE() = takes(0) returns (0){
+    NON_PAYABLE()                   // []
+    _ORACLE()                       // [oracle]
+    [z] mstore                      // []
+    0x20 [z] return                 // []
+}
+
+#define macro _REQUIRE() = takes(1) returns (0){
+                                    // [case]
+    iszero                          // [case == 0]
+    iszero                          // [(case == 0) == 0]
+    finish                          // [jump_dest, (case == 0) == 0]
+    jumpi                           // []
+
+    [z] [z] revert
+
+    finish:
+}
+
+#define macro _REQUIRE_NOT() = takes(1) returns (0){
+                                    // [case]
+    iszero                          // [case == 0]
+    finish                          // [jump_dest, case == 0]
+    jumpi                           // []
+
+    [z] [z] revert
+
+    finish:
+}
+ 
+#define macro _HUSD_MINT(mem_ptr) = takes(2) returns (0) {
+                                    // [to, amount]
+    _HUSD_TOKEN()                   // [token, to, amount]
+    __RIGHTPAD(0x40c10f19)          // [mint_selector, token, to, amount]
+    <mem_ptr>                       // [mem_ptr, mint_selector, token, to, amount]
+    mstore                          // [token, to, amount]
+    swap2                           // [amount, to, token]
+    <mem_ptr> 0x24 add              // [mem_ptr + 0x24, amount, to, token]
+    mstore                          // [to, token]
+    <mem_ptr> 0x04 add              // [mem_ptr + 0x04, to, token]
+    mstore                          // [token]
+    <mem_ptr>                       // [mem_ptr, token]
+    0x44 <mem_ptr>                  // [mem_ptr, 0x44, mem_ptr, token]
+    [z] [z]                         // [0x00, 0x00, mem_ptr, 0x44, mem_ptr, token]
+    swap5                           // [token, 0x00, mem_ptr, 0x44, mem_ptr, 0x00]
+    gas call                        // [success]
+    _REQUIRE()                      // []
+}
+
+#define macro _HUSD_BURN(mem_ptr) = takes(2) returns (0) {
+                                    // [from , amount]
+    _HUSD_TOKEN()                   // [token, from, amount]
+    __RIGHTPAD(0x9dc29fac)          // [mint_selector, token, from, amount]
+    <mem_ptr>                       // [mem_ptr, mint_selector, token, from, amount]
+    mstore                          // [token, from, amount]
+    swap2                           // [amount, from, token]
+    <mem_ptr> 0x24 add              // [mem_ptr + 0x24, amount, from, token]
+    mstore                          // [from, token]
+    <mem_ptr> 0x04 add              // [mem_ptr + 0x04, from, token]
+    mstore                          // [token]
+    <mem_ptr>                       // [mem_ptr, token]
+    0x44 <mem_ptr>                  // [mem_ptr, 0x44, mem_ptr, token]
+    [z] [z]                         // [0x00, 0x00, mem_ptr, 0x44, mem_ptr, token]
+    swap5                           // [token, 0x00, mem_ptr, 0x44, mem_ptr, 0x00]
+    gas call                        // [success]
+    _REQUIRE()                      // []
+}
+
+#define macro _ORACLE_LATEST_ANSWER(mem_ptr) = takes(0) returns(1) {
+    _ORACLE()
+    // LOG_STACK_AS_UINT(dup1, 0x0)
+    // stop
+    __RIGHTPAD(0x50d25bcd)          // [latest_answer_selector, oracle]
+    <mem_ptr>                       // [mem_ptr, latest_answer_selector, oracle]
+    mstore                          // [oracle]
+    <mem_ptr>                       // [mem_ptr, oracle]
+    0x04 <mem_ptr>                  // [mem_ptr, 0x04, mem_ptr, oracle]
+    [z]                             // [0, mem_ptr, 0x04, mem_ptr, oracle]
+    0x20                            // [0x20, 0, mem_ptr, 0x04, mem_ptr, oracle]
+    swap5                           // [oracle, 0, mem_ptr, 0x04, mem_ptr, 0x20]
+    gas call                        // [success]
+    _REQUIRE()                      // []
+    <mem_ptr> mload                 // [latest_answer]
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// vendored from: https://github.com/huff-language/huffmate                                                                ///
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                                                                                                                            ///
+/// @notice Retrives an "immutable" from the runtime bytecode.                                                              ///
+#define macro _GET_IMMUTABLE(offset_end, free_memory) = takes (0) returns (1) {                                             ///
+    0x20                            // [size]                                                                               ///
+    <offset_end> codesize sub       // [offset_code, size]                                                                  ///
+    <free_memory>                   // [offset_memory, offset_code, size]                                                   ///
+    codecopy                        // []                                                                                   ///
+    <free_memory> mload             // [value]                                                                              ///
+}                                                                                                                           ///
+                                                                                                                            ///    
+                                                                                                                            ///
+/// @notice Given two keys (ie a slot and a key), hash them together, generating a slot for a secondary hashmap.            ///    
+#define macro GET_SLOT_FROM_KEYS(mem_ptr) = takes(2) returns (1) {                                                          ///
+    // Input stack: [slot, key]                                                                                             ///
+    // Load the data into memory.                                                                                           ///
+    <mem_ptr> 0x20 add              // [<mem_ptr> + 32, slot, key]                                                          ///
+    mstore                          // [key]                                                                                ///
+    <mem_ptr>                       // [<mem_ptr>, key]                                                                     ///
+    mstore                          // []                                                                                   ///
+                                                                                                                            ///
+    // Hash the data, generating a slot.                                                                                    ///  
+    0x40                            // [64]                                                                                 ///
+    <mem_ptr>                       // [<mem_ptr>, 64]                                                                      ///
+    sha3                            // [slot]                                                                               ///
+}                                                                                                                           ///
+                                                                                                                            ///
+/// @notice Adds two numbers and reverts on overflow                                                                        ///
+#define macro SAFE_ADD() = takes (2) returns (1) {                                                                          ///
+    // input stack                  // [num1, num2]                                                                         ///
+    dup2                            // [num2, num1, num2]                                                                   ///
+    add                             // [result, num2]                                                                       ///
+    dup1                            // [result, result, num2]                                                               ///    
+    swap2                           // [num2, result, result]                                                               ///
+    gt                              // [is_overflow, result]                                                                ///
+    iszero                          // [is_not_overflow, result]                                                            ///
+    is_not_overflow jumpi           // [result]                                                                             ///
+        [ARITHMETIC_OVERFLOW] PANIC()                                                                                       ///
+    is_not_overflow:                // [result]                                                                             ///
+}                                                                                                                           ///
+                                                                                                                            ///
+/// @notice Subtracts two numbers and reverts on underflow                                                                  ///
+#define macro SAFE_SUB() = takes (2) returns (1) {                                                                          ///
+    // input stack                  // [num1, num2]                                                                         ///
+    dup1                            // [num1, num1, num2]                                                                   ///
+    dup3                            // [num2, num1, num1, num2]                                                             ///
+    gt                              // [is_underflow, num1, num2]                                                           ///
+    iszero                          // [is_not_underflow, num1, num2]                                                       ///
+    is_not_underflow jumpi          // [num1, num2]                                                                         ///
+        [ARITHMETIC_OVERFLOW] PANIC()                                                                                       ///
+    is_not_underflow:               // [num1, num2]                                                                         ///
+    sub                             // [result]                                                                             ///
+}                                                                                                                           ///
+                                                                                                                            ///
+/// @notice Multiplies two numbers and reverts on overflow                                                                  ///
+#define macro SAFE_MUL() = takes (2) returns (1) {                                                                          ///
+    // input stack                  // [num1, num2]                                                                         ///
+    dup1                            // [num1, num1, num2]                                                                   ///
+    is_not_zero jumpi               // [num1, num2]                                                                         ///
+        mul                         // [result]                                                                             ///
+        0x01 is_not_overflow jumpi                                                                                          ///
+    is_not_zero:                    // [num1, num2]                                                                         ///
+    dup2                            // [num2, num1, num2]                                                                   ///
+    dup2                            // [num1, num2, num1, num2]                                                             ///
+    mul                             // [result, num1, num2]                                                                 ///
+    swap1                           // [num1, result, num2]                                                                 ///
+    dup2                            // [result, num1, result, num2]                                                         ///
+    div                             // [div_check, result, num2]                                                            ///
+    swap1                           // [result, div_check, num2]                                                            ///
+    swap2                           // [num2, div_check, result]                                                            ///
+    eq                              // [is_not_overflow, result]                                                            ///
+    is_not_overflow jumpi           // [result]                                                                             ///
+        [ARITHMETIC_OVERFLOW] PANIC()                                                                                       ///
+    is_not_overflow:                                                                                                        ///
+}                                                                                                                           ///
+                                                                                                                            ///
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////////////////////
+///                                    MAIN                                 ///
+///////////////////////////////////////////////////////////////////////////////
+
+#define macro MAIN() = takes (0) returns (0) {
+    [z] calldataload 0xE0 shr
+
+    dup1 __FUNC_SIG(deposit)     eq depositJump     jumpi
+    dup1 __FUNC_SIG(burn)        eq burnJump        jumpi
+    dup1 __FUNC_SIG(mint)        eq mintJump        jumpi
+    dup1 __FUNC_SIG(withdraw)    eq withdrawJump    jumpi
+    dup1 __FUNC_SIG(liquidate)   eq liquidateJump   jumpi
+    dup1 __FUNC_SIG(collatRatio) eq collatRatioJump jumpi
+    dup1 __FUNC_SIG(weth)        eq wethJump        jumpi
+    dup1 __FUNC_SIG(hUSD)        eq hUSDJump        jumpi
+    dup1 __FUNC_SIG(oracle)      eq oracleJump      jumpi
+
+
+    [z] [z] revert
+
+    depositJump:
+        DEPOSIT()
+    burnJump:
+        BURN()
+    mintJump:
+        MINT()
+    withdrawJump:
+        WITHDRAW()
+    liquidateJump:
+        LIQUIDATE()
+    collatRatioJump:
+        COLLAT_RATIO()
+    wethJump:
+        WETH_TOKEN()
+    hUSDJump:
+        HUSD_TOKEN()
+    oracleJump:
+        ORACLE()
+}

@@ -10,7 +10,7 @@ If you're new to MicroStable, check out the original repository [here](https://g
 - [✅] Vyper - [sudo init vyper](https://x.com/big_tech_sux)
 - [✅] Sway - [PraneshASP](https://x.com/0xasp_)
 - [✅] Rust - [Nirlin](https://x.com/0xnirlin)
-- [] huff
+- [✅] huff - [nonso](https://github.com/0xnonso/microstable-huff)
 - [] Move
 - [] Cairo
 
