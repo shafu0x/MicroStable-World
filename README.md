@@ -11,6 +11,7 @@ If you're new to MicroStable, check out the original repository [here](https://g
 - [✅] Sway - [PraneshASP](https://x.com/0xasp_)
 - [✅] Rust - [Nirlin](https://x.com/0xnirlin)
 - [✅] huff - [nonso](https://github.com/0xnonso/microstable-huff)
+- [✅] Yul - [cawfree](https://github.com/cawfree/MicroStable-Yul)
 - [] Move
 - [] Cairo
 
@@ -21,3 +22,4 @@ We welcome contributions! 🎉 Here's how you can help:
 Add a new implementation in a language not yet listed.
 Improve existing implementations.
 Write tests or improve documentation.
+
