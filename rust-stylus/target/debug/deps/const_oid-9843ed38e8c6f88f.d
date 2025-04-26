@@ -1,0 +1,11 @@
+/Users/jacksmith/prog/microstable-stylus/target/debug/deps/libconst_oid-9843ed38e8c6f88f.rmeta: /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/lib.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/checked.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/arcs.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/encoder.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/error.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/parser.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/../README.md
+
+/Users/jacksmith/prog/microstable-stylus/target/debug/deps/const_oid-9843ed38e8c6f88f.d: /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/lib.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/checked.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/arcs.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/encoder.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/error.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/parser.rs /Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/../README.md
+
+/Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/lib.rs:
+/Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/checked.rs:
+/Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/arcs.rs:
+/Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/encoder.rs:
+/Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/error.rs:
+/Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/parser.rs:
+/Users/jacksmith/.cargo/registry/src/index.crates.io-6f17d22bba15001f/const-oid-0.9.6/src/../README.md:
