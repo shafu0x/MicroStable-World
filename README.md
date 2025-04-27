@@ -9,7 +9,8 @@ If you're new to MicroStable, check out the original repository [here](https://g
 - [✅] Solidity - [shafu0x](https://x.com/shafu0x)
 - [✅] Vyper - [sudo init vyper](https://x.com/big_tech_sux)
 - [✅] Sway - [PraneshASP](https://x.com/0xasp_)
-- [✅] Rust - [Nirlin](https://x.com/0xnirlin)
+- [✅] Rust Solana - [Nirlin](https://x.com/0xnirlin)
+- [✅] Rust Stylus - [0xjsi.eth](https://x.com/0xjsieth)
 - [✅] huff - [nonso](https://github.com/0xnonso/microstable-huff)
 - [✅] Yul - [cawfree](https://github.com/cawfree/MicroStable-Yul)
 - [] Move

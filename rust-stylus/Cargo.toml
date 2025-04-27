@@ -1,0 +1,51 @@
+[package]
+name = "microstable-stylus"
+version = "0.1.0"
+license = "ISC"
+edition = "2021"
+keywords = ["arbitrum", "ethereum", "stylus", "alloy"]
+description = "Shafus MicroStable ported to Arbitrum Stylus"
+
+[dependencies]
+alloy-primitives = { version = "=0.8.20", default-features = false}
+alloy-sol-types = { version = "=0.8.20", default-features = false}
+mini-alloc = "0.8.4"
+stylus-sdk = { version = "0.8.4", default-features = false}
+hex = "0.4.3"
+dotenv = "0.15.0"
+
+[dev-dependencies]
+tokio = { version = "1.12.0", features = ["full"] }
+ethers = "2.0"
+eyre = "0.6.8"
+stylus-sdk = { version = "0.8.4", features = ["stylus-test"] }
+
+[features]
+#default = ["manager", "sh-usd"]
+sh-usd = []
+manager = []
+test-oracle = []
+test-weth = []
+
+[[bin]]
+name = "microstable-stylus"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["rlib", "cdylib"]  # Add rlib for LSP compatibility
+edition = "2021"
+name = "libmicrostable"
+
+[profile.dev]
+codegen-units = 16
+panic = "unwind"
+
+[profile.release]
+codegen-units = 1
+strip = true
+lto = true
+panic = "abort"
+
+# If you need to reduce the binary size, it is advisable to try other
+# optimization levels, such as "s" and "z"
+opt-level = 3
